@@ -25,7 +25,9 @@
 
 from __future__ import print_function
 import os
+import colorama
 
+from .compat import str
 
 __ALL__ = [ 'colored', 'cprint' ]
 
@@ -80,11 +82,12 @@ COLORS = dict(
         )
 
 
-RESET = '\033[0m'
+RESET = colorama.Style.RESET_ALL
 
 
 def colored(text, color=None, on_color=None, attrs=None):
-    """Colorize text.
+    """Colorize text using a reimplementation of the colorizer from
+    https://github.com/pavdmyt/yaspin so that it works on windows.
 
     Available text colors:
         red, green, yellow, blue, magenta, cyan, white.
@@ -99,15 +102,32 @@ def colored(text, color=None, on_color=None, attrs=None):
         colored('Hello, World!', 'red', 'on_grey', ['blue', 'blink'])
         colored('Hello, World!', 'green')
     """
-    if os.getenv('ANSI_COLORS_DISABLED') is None:
-        fmt_str = '\033[%dm%s'
+    if os.getenv("ANSI_COLORS_DISABLED") is None:
+        style = "NORMAL"
+        if "bold" in attrs:
+            style = "BRIGHT"
+            attrs.remove("bold")
         if color is not None:
-            text = fmt_str % (COLORS[color], text)
+            color = color.upper()
+            text = str("%s%s%s%s%s") % (
+                str(getattr(colorama.Fore, color)),
+                str(getattr(colorama.Style, style)),
+                str(text),
+                str(colorama.Fore.RESET),
+                str(colorama.Style.NORMAL),
+            )
 
         if on_color is not None:
-            text = fmt_str % (HIGHLIGHTS[on_color], text)
+            on_color = on_color.upper()
+            text = str("%s%s%s%s") % (
+                str(getattr(colorama.Back, on_color)),
+                str(text),
+                str(colorama.Back.RESET),
+                str(colorama.Style.NORMAL),
+            )
 
         if attrs is not None:
+            fmt_str = str("%s[%%dm%%s%s[9m") % (chr(27), chr(27))
             for attr in attrs:
                 text = fmt_str % (ATTRIBUTES[attr], text)
 
